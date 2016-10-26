@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <TextView
+        android:id="@+id/tvConnectStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFCC"
+        android:textColor="#666666"
+        android:gravity="center"
+        android:text="连接状态" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center" >
+
+        <include
+            android:id="@+id/includeLogin"
+            layout="@layout/user_login" />
+
+        <include
+            android:id="@+id/includeRegister"
+            layout="@layout/user_register"
+            android:visibility="gone" />
+
+        <include
+            android:id="@+id/includeUserInfo"
+            layout="@layout/user_info"
+            android:visibility="gone" />
+    </RelativeLayout>
+
+</LinearLayout>

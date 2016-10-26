@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <TextView
+        android:id="@+id/tvConnectStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFCC"
+        android:gravity="center"
+        android:text="无法连接到服务器"
+        android:textColor="#666666"
+        android:visibility="gone" />
+
+    <RelativeLayout
+        android:id="@+id/fragmentContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/space" >
+    </RelativeLayout>
+
+    <View
+        android:id="@+id/space"
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_above="@+id/rdoGop"
+        android:background="#AAAAAA"
+        android:orientation="vertical" >
+    </View>
+
+    <RadioGroup
+        android:id="@+id/rdoGop"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#F6F6F6"
+        android:orientation="horizontal" >
+
+        <Button
+            android:id="@+id/btnUserList"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="#fcfcfc"
+            android:drawableTop="@drawable/tab_user_list"
+            android:paddingBottom="3dp"
+            android:paddingTop="3dp"
+            android:scaleType="matrix"
+            android:text="好友"
+            android:textColor="@color/main_botton_text_color"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnDevice"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="#fcfcfc"
+            android:drawableTop="@drawable/tab_device"
+            android:paddingBottom="3dp"
+            android:paddingTop="3dp"
+            android:scaleType="matrix"
+            android:text="设备"
+            android:textColor="@color/main_botton_text_color"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnShopping"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="#fcfcfc"
+            android:drawableTop="@drawable/tab_shopping"
+            android:paddingBottom="3dp"
+            android:paddingTop="3dp"
+            android:scaleType="matrix"
+            android:text="购物"
+            android:textColor="@color/main_botton_text_color"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnSettings"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="#fcfcfc"
+            android:drawableTop="@drawable/tab_settings"
+            android:paddingBottom="3dp"
+            android:paddingTop="3dp"
+            android:scaleType="matrix"
+            android:text="设置"
+            android:textColor="@color/main_botton_text_color"
+            android:textSize="12sp" />
+    </RadioGroup>
+
+</RelativeLayout>

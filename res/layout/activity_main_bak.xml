@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <TextView
+        android:id="@+id/tvConnectStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFCC"
+        android:gravity="center"
+        android:text="无法连接到服务器"
+        android:textColor="#666666"
+        android:visibility="gone" />
+
+    <RelativeLayout
+        android:id="@+id/fragmentContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/space" >
+    </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/space"
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_above="@+id/rdoGop"
+        android:background="#AAAAAA"
+        android:orientation="vertical" >
+    </LinearLayout>
+
+    <RadioGroup
+        android:id="@+id/rdoGop"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#F6F6F6"
+        android:orientation="horizontal"
+        android:paddingBottom="5dp"
+        android:paddingTop="5dp" >
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <RadioButton
+            android:id="@+id/rdoBtnUserList"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rdobtn_user_list"
+            android:button="@null" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <RadioButton
+            android:id="@+id/rdoBtnControl"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rdobtn_control"
+            android:button="@null" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <RadioButton
+            android:id="@+id/rdoBtnShopping"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rdobtn_cart"
+            android:button="@null" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <RadioButton
+            android:id="@+id/rdoBtnSettings"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rdobtn_settings"
+            android:button="@null" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+    </RadioGroup>
+
+</RelativeLayout>
