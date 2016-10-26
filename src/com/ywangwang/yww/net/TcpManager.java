@@ -28,7 +28,7 @@ import android.util.Log;
 public class TcpManager {
 	private static final String TAG = "TcpManager";
 
-	private static final String BROADCAST_ACTION = GlobalInfo.BROADCAST_SERVICE_ACTION;
+	private static final String BROADCAST_ACTION = GlobalInfo.BROADCAST_DATA_SEND_ACTION;
 	private static final String BROADCAST_RECEIVE_NEW_MESSAGE = GlobalInfo.BROADCAST_RECEIVE_NEW_MESSAGE;
 	private static final String BROADCAST_CONNECT_SOCKET_SUCCESS = GlobalInfo.BROADCAST_CONNECT_SOCKET_SUCCESS;
 

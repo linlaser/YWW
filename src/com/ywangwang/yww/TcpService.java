@@ -6,6 +6,7 @@ import com.ywangwang.yww.net.Heartbeat;
 import com.ywangwang.yww.net.Net;
 import com.ywangwang.yww.net.Operaton;
 import com.ywangwang.yww.net.TcpManager;
+import com.ywangwang.yww.send.DataSendManager;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -40,9 +41,10 @@ public class TcpService extends Service {
 	public void onCreate() {
 		Log.d(TAG, "onCreate()");
 		TcpManager.getInstance(this, GlobalInfo.serverAddress);
+		DataSendManager.getInstance().init(getApplicationContext());
 		lastConnectTime = System.currentTimeMillis();
 		handlerAutoConnect.post(runnableAutoConnect);
-		registerReceiver(broadcastReceiver, new IntentFilter(GlobalInfo.BROADCAST_SERVICE_ACTION));
+//		registerReceiver(broadcastReceiver, new IntentFilter(GlobalInfo.BROADCAST_SERVICE_ACTION));
 		toast = new CustomToast(this);
 		toast.setText(null, 16f);
 		super.onCreate();
@@ -54,6 +56,7 @@ public class TcpService extends Service {
 		handlerAutoConnect.removeCallbacksAndMessages(null);
 		handler.removeCallbacksAndMessages(null);
 		unregisterReceiver(broadcastReceiver);
+		DataSendManager.getInstance().destroy();
 		super.onDestroy();
 	}
 

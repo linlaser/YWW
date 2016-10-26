@@ -7,6 +7,7 @@ public class GlobalInfo {
 
 	public static final String BROADCAST_ACTION = "com.ywangwang.yww.BROADCAST";
 	public static final String BROADCAST_SERVICE_ACTION = "com.ywangwang.yww.TcpService.BROADCAST";
+	public static final String BROADCAST_DATA_SEND_ACTION = "com.ywangwang.yww.DataSendManager.BROADCAST";
 	public static final String BROADCAST_LOGIN = "LOGIN";
 	public static final String BROADCAST_LOGOUT = "LOGOUT";
 	public static final String BROADCAST_LOGIN_SUCCESS = "LOGIN_SUCCESS";

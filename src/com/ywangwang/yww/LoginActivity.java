@@ -1,5 +1,8 @@
 package com.ywangwang.yww;
 
+import com.ywangwang.yww.send.DataSendManager;
+import com.ywangwang.yww.send.LoginCallBack;
+
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -46,6 +49,21 @@ public class LoginActivity extends Activity {
 			((RadioButton) findViewById(R.id.rdoBtnRemote)).setChecked(true);
 		}
 		registerReceiver(broadcastReceiver, new IntentFilter(GlobalInfo.BROADCAST_ACTION));
+		DataSendManager.getInstance().setLoginListener(new LoginCallBack() {
+			@Override
+			public void onSuccess(String username, String password) {
+				loginOrRegisterSuccess(username, password);
+				TcpService.toast.setText("³É¹¦£¡").show();
+			}
+
+			@Override
+			public void onError(int code, String message) {
+				btnLogin.setText("µÇÂ¼");
+				logining = false;
+				btnLogin.setEnabled(true);
+				TcpService.toast.setText("Ê§°Ü£¡\n" + message).show();
+			}
+		});
 	}
 
 	OnClickListener clickListener = new OnClickListener() {
@@ -71,7 +89,8 @@ public class LoginActivity extends Activity {
 				logining = true;
 				btnLogin.setEnabled(false);
 				String[] user = { username, password };
-				sendBroadcast(new Intent(GlobalInfo.BROADCAST_SERVICE_ACTION).putExtra(GlobalInfo.BROADCAST_LOGIN, user));
+				// sendBroadcast(new Intent(GlobalInfo.BROADCAST_SERVICE_ACTION).putExtra(GlobalInfo.BROADCAST_LOGIN, user));
+				DataSendManager.getInstance().login(username, password);
 				break;
 			case R.id.chkBoxSavePassword:
 				chkBoxAutoLogin.setChecked(false);
@@ -93,15 +112,7 @@ public class LoginActivity extends Activity {
 	BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			if (intent.getExtras().getStringArray(GlobalInfo.BROADCAST_LOGIN_SUCCESS) != null) {
-				String username = (intent.getExtras().getStringArray(GlobalInfo.BROADCAST_LOGIN_SUCCESS))[0];
-				String password = (intent.getExtras().getStringArray(GlobalInfo.BROADCAST_LOGIN_SUCCESS))[1];
-				loginOrRegisterSuccess(username, password);
-			} else if (intent.getExtras().getBoolean(GlobalInfo.BROADCAST_LOGIN_FAIL, false) == true) {
-				btnLogin.setText("µÇÂ¼");
-				logining = false;
-				btnLogin.setEnabled(true);
-			} else if (intent.getExtras().getBoolean(GlobalInfo.BROADCAST_UPDATE_CONNECT_STATUS, false) == true) {
+			if (intent.getExtras().getBoolean(GlobalInfo.BROADCAST_UPDATE_CONNECT_STATUS, false) == true) {
 				if (GlobalInfo.unableConnectToServer == true) {
 					tvConnectStatus.setVisibility(View.VISIBLE);
 				} else {
