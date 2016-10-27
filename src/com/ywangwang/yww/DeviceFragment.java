@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.ywangwang.yww.send.DataSendManager;
+import com.ywangwang.yww.send.CallBack.GetDeviceListCallBack;
+
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
@@ -38,6 +41,7 @@ public class DeviceFragment extends Fragment {
 	private ListView lvDevice;
 	private List<Map<String, Object>> listDevice;
 	private MySimpleAdapter saDevice;
+	private Client client;
 	SwipeRefreshLayout swipeRefreshLayout;
 
 	@Override
@@ -55,14 +59,26 @@ public class DeviceFragment extends Fragment {
 		lvDevice.setOnItemClickListener(itemClickListener);
 
 		getActivity().registerReceiver(broadcastReceiver, new IntentFilter(GlobalInfo.BROADCAST_ACTION));
-		if (null == savedInstanceState && GlobalInfo.client == null) {
-			swipeRefreshLayout.post(new Runnable() {
-				@Override
-				public void run() {
-					swipeRefreshLayout.setRefreshing(true);
-					getDeviceList();
-				}
-			});
+		DataSendManager.getInstance().setGetDeviceListCallBack(new GetDeviceListCallBack() {
+			@Override
+			public void onSuccess(Client newClient) {
+				TcpService.toast.setText("获取成功！").show();
+				swipeRefreshLayout.setRefreshing(false);
+				client = newClient;
+				addWaterCodes(client);
+			}
+
+			@Override
+			public void onError(int code, String message) {
+				TcpService.toast.setText("获取失败！\n" + message).show();
+				swipeRefreshLayout.setRefreshing(false);
+				client = null;
+				addWaterCodes(client);
+			}
+		});
+
+		if (null != savedInstanceState) {
+			client = (Client) savedInstanceState.getSerializable("client");
 		}
 		return view;
 	}
@@ -70,6 +86,9 @@ public class DeviceFragment extends Fragment {
 	@Override
 	public void onSaveInstanceState(Bundle outState) {
 		Log.i(TAG, "onSaveInstanceState");
+		if (client != null) {
+			outState.putSerializable("client", client);
+		}
 		super.onSaveInstanceState(outState);
 	}
 
@@ -83,7 +102,17 @@ public class DeviceFragment extends Fragment {
 	public void onResume() {
 		super.onResume();
 		Log.i(TAG, TAG + "-->>onResume");
-		addWaterCodes(GlobalInfo.client);
+		if (client == null && ConnectionHelper.getLoginStatus() == ConnectionHelper.LOGIN_SUCCESS) {
+			swipeRefreshLayout.post(new Runnable() {
+				@Override
+				public void run() {
+					swipeRefreshLayout.setRefreshing(true);
+					getDeviceList();
+				}
+			});
+		} else {
+			addWaterCodes(client);
+		}
 	}
 
 	@Override
@@ -107,6 +136,7 @@ public class DeviceFragment extends Fragment {
 	@Override
 	public void onDestroy() {
 		getActivity().unregisterReceiver(broadcastReceiver);
+		DataSendManager.getInstance().removeGetDeviceListCallBack();
 		super.onDestroy();
 		Log.i(TAG, TAG + "-->>onDestroy");
 	}
@@ -126,22 +156,22 @@ public class DeviceFragment extends Fragment {
 
 	private void getDeviceList() {
 		addWaterCodes(null);
-		getActivity().sendBroadcast(new Intent(GlobalInfo.BROADCAST_SERVICE_ACTION).putExtra(GlobalInfo.BROADCAST_GET_DEVICE_LIST, true));
+		DataSendManager.getInstance().getDeviceList();
 	}
 
 	OnItemClickListener itemClickListener = new OnItemClickListener() {
 		@Override
 		public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
-			if (GlobalInfo.client != null) {
-				if (GlobalInfo.client.gxjOnline[position] == Client.OFFLINE) {
-					String msg = "设备离线，无法远程控制，\n设备编号：" + String.format("%012X", GlobalInfo.client.gxjIds[position]);
+			if (client != null) {
+				if (client.gxjOnline[position] == Client.OFFLINE) {
+					String msg = "设备离线，无法远程控制，\n设备编号：" + String.format("%012X", client.gxjIds[position]);
 					AlertDialog.Builder builer = new Builder(getActivity());
 					builer.setTitle("设备信息");
 					builer.setMessage(msg);
 					builer.setPositiveButton("确定", null);
 					builer.show();
 				} else {
-					startActivity(new Intent(getActivity(), DeviceControl.class).putExtra("deviceId", GlobalInfo.client.gxjIds[position]));
+					startActivity(new Intent(getActivity(), DeviceControl.class).putExtra("deviceId", client.gxjIds[position]));
 				}
 			}
 		}
@@ -167,12 +197,6 @@ public class DeviceFragment extends Fragment {
 	BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			if (intent.getExtras().getBoolean(GlobalInfo.BROADCAST_GET_DEVICE_LIST_SUCCESS, false) == true) {
-				addWaterCodes(GlobalInfo.client);
-				swipeRefreshLayout.setRefreshing(false);
-			} else if (intent.getExtras().getBoolean(GlobalInfo.BROADCAST_GET_DEVICE_LIST_FAIL, false) == true) {
-				swipeRefreshLayout.setRefreshing(false);
-			}
 		}
 	};
 
@@ -187,9 +211,9 @@ public class DeviceFragment extends Fragment {
 			if (convertView == null) {
 				convertView = LayoutInflater.from(getActivity()).inflate(R.layout.device_list_item, null);
 			}
-			if (GlobalInfo.client != null && GlobalInfo.client.gxjIds.length > position) {
+			if (client != null && client.gxjIds.length > position) {
 				TextView tv = (TextView) convertView.findViewById(R.id.tvDeviceStatus);
-				if (GlobalInfo.client.gxjOnline[position] == true) {
+				if (client.gxjOnline[position] == true) {
 					tv.setTextColor(GlobalInfo.COLOR_GREEN);
 				} else {
 					tv.setTextColor(GlobalInfo.COLOR_RED);

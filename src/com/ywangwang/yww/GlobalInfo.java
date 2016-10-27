@@ -95,7 +95,7 @@ public class GlobalInfo {
 	public static long id = 0L;
 	public static int loginKey = 0;
 	public static boolean unableConnectToServer = false;
-	public static boolean manualLogout = false;
+//	public static boolean manualLogout = false;
 
 	public static Client client = null;
 

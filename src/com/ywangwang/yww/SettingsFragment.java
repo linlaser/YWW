@@ -1,5 +1,7 @@
 package com.ywangwang.yww;
 
+import com.ywangwang.yww.send.DataSendManager;
+
 import android.app.Fragment;
 import android.content.Intent;
 import android.os.Bundle;
@@ -79,7 +81,9 @@ public class SettingsFragment extends Fragment {
 		public void onClick(View v) {
 			switch (v.getId()) {
 			case R.id.btnLogout:
-				getActivity().sendBroadcast(new Intent(GlobalInfo.BROADCAST_SERVICE_ACTION).putExtra(GlobalInfo.BROADCAST_LOGOUT, true));
+				DataSendManager.getInstance().logout();
+				getActivity().finish();
+				// getActivity().sendBroadcast(new Intent(GlobalInfo.BROADCAST_SERVICE_ACTION).putExtra(GlobalInfo.BROADCAST_LOGOUT, true));
 				break;
 			default:
 				break;

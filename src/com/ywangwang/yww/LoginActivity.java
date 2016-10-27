@@ -1,7 +1,7 @@
 package com.ywangwang.yww;
 
 import com.ywangwang.yww.send.DataSendManager;
-import com.ywangwang.yww.send.LoginCallBack;
+import com.ywangwang.yww.send.CallBack.LoginCallBack;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -25,11 +25,11 @@ public class LoginActivity extends Activity {
 	private CheckBox chkBoxSavePassword, chkBoxAutoLogin;
 	private Button btnLogin;
 	private TextView tvConnectStatus;
-	private boolean logining = false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		Log.d(TAG, "onCreate");
+		ConnectionHelper.setAlreadyShowLoginActivity(true);
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_login);
 		tvConnectStatus = (TextView) findViewById(R.id.tvConnectStatus);
@@ -49,7 +49,7 @@ public class LoginActivity extends Activity {
 			((RadioButton) findViewById(R.id.rdoBtnRemote)).setChecked(true);
 		}
 		registerReceiver(broadcastReceiver, new IntentFilter(GlobalInfo.BROADCAST_ACTION));
-		DataSendManager.getInstance().setLoginListener(new LoginCallBack() {
+		DataSendManager.getInstance().setLoginCallBack(new LoginCallBack() {
 			@Override
 			public void onSuccess(String username, String password) {
 				loginOrRegisterSuccess(username, password);
@@ -59,7 +59,6 @@ public class LoginActivity extends Activity {
 			@Override
 			public void onError(int code, String message) {
 				btnLogin.setText("µÇÂ¼");
-				logining = false;
 				btnLogin.setEnabled(true);
 				TcpService.toast.setText("Ê§°Ü£¡\n" + message).show();
 			}
@@ -71,8 +70,8 @@ public class LoginActivity extends Activity {
 		public void onClick(View v) {
 			switch (v.getId()) {
 			case R.id.btnLogin:
-				if (GlobalInfo.unableConnectToServer == true)
-					return;
+//				if (ConnectionHelper.getConnectionStatus() != ConnectionHelper.CONNECT_SUCCESS)
+//					return;
 				final String username = edtTxtUsernameLogin.getText().toString().trim();
 				final String password = edtTxtPasswordLogin.getText().toString().trim();
 				if (username == null || username.length() <= 0) {
@@ -86,10 +85,7 @@ public class LoginActivity extends Activity {
 					return;
 				}
 				btnLogin.setText("ÕýÔÚµÇÂ¼...");
-				logining = true;
 				btnLogin.setEnabled(false);
-				String[] user = { username, password };
-				// sendBroadcast(new Intent(GlobalInfo.BROADCAST_SERVICE_ACTION).putExtra(GlobalInfo.BROADCAST_LOGIN, user));
 				DataSendManager.getInstance().login(username, password);
 				break;
 			case R.id.chkBoxSavePassword:
@@ -113,7 +109,7 @@ public class LoginActivity extends Activity {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			if (intent.getExtras().getBoolean(GlobalInfo.BROADCAST_UPDATE_CONNECT_STATUS, false) == true) {
-				if (GlobalInfo.unableConnectToServer == true) {
+				if (ConnectionHelper.getConnectionStatus() == ConnectionHelper.CONNECT_FAIL) {
 					tvConnectStatus.setVisibility(View.VISIBLE);
 				} else {
 					tvConnectStatus.setVisibility(View.GONE);
@@ -125,7 +121,9 @@ public class LoginActivity extends Activity {
 	@Override
 	protected void onDestroy() {
 		Log.d(TAG, "onDestroy");
+		DataSendManager.getInstance().removeLoginCallBack();
 		unregisterReceiver(broadcastReceiver);
+		ConnectionHelper.setAlreadyShowLoginActivity(false);
 		super.onDestroy();
 	}
 
@@ -162,30 +160,27 @@ public class LoginActivity extends Activity {
 	@Override
 	protected void onResume() {
 		Log.d(TAG, "onResume");
-		if (GlobalInfo.unableConnectToServer == true) {
+		if (ConnectionHelper.getLoginStatus() == ConnectionHelper.LOGINING) {
+			btnLogin.setText("ÕýÔÚµÇÂ¼...");
+			btnLogin.setEnabled(false);
+		}
+		if (ConnectionHelper.getConnectionStatus() == ConnectionHelper.CONNECT_FAIL) {
 			tvConnectStatus.setVisibility(View.VISIBLE);
 		} else {
 			tvConnectStatus.setVisibility(View.GONE);
 		}
-		GlobalInfo.manualLogout = true;
 		super.onResume();
 	}
 
 	@Override
 	protected void onSaveInstanceState(Bundle outState) {
 		Log.d(TAG, "onSaveInstanceState");
-		outState.putBoolean("logining", logining);
 		super.onSaveInstanceState(outState);
 	}
 
 	@Override
 	protected void onRestoreInstanceState(Bundle savedInstanceState) {
 		Log.d(TAG, "onRestoreInstanceState");
-		logining = savedInstanceState.getBoolean("logining");
-		if (logining) {
-			btnLogin.setText("ÕýÔÚµÇÂ¼...");
-			btnLogin.setEnabled(false);
-		}
 		super.onRestoreInstanceState(savedInstanceState);
 	}
 
@@ -215,12 +210,10 @@ public class LoginActivity extends Activity {
 		SharedPreferences.Editor editor = sharedPreferences.edit();
 		editor.putString(GlobalInfo.S_P_KEY_SERVER_ADDRESS, GlobalInfo.serverAddress);
 		editor.commit();
-		sendBroadcast(new Intent(GlobalInfo.BROADCAST_SERVICE_ACTION).putExtra(GlobalInfo.BROADCAST_SWITCH_SERVER, GlobalInfo.serverAddress));
+		ConnectionHelper.switchServer(address);
 	}
 
 	private void loginOrRegisterSuccess(String username, String password) {
-		GlobalInfo.manualLogout = false;
-		GlobalInfo.online = true;
 		GlobalInfo.username = username;
 		GlobalInfo.password = password;
 		GlobalInfo.savePassword = chkBoxSavePassword.isChecked();// ±£´æÃÜÂë

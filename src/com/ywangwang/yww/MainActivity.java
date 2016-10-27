@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
 		registerReceiver(broadcastReceiver, new IntentFilter(GlobalInfo.BROADCAST_ACTION));
 		SharedPreferencesConfig.read(this);
 		startService(new Intent(this, TcpService.class));
-		if ((GlobalInfo.password.length() == 0 || GlobalInfo.autoLogin == false) && GlobalInfo.online == false) {
+		if ((GlobalInfo.password.length() == 0 || GlobalInfo.autoLogin == false) && ConnectionHelper.getLoginStatus() != ConnectionHelper.LOGIN_SUCCESS) {
 			startActivity(new Intent(this, LoginActivity.class));
 			finish();
 			return;
@@ -129,7 +129,7 @@ public class MainActivity extends Activity {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			if (intent.getExtras().getBoolean(GlobalInfo.BROADCAST_UPDATE_CONNECT_STATUS, false) == true) {
-				if (GlobalInfo.unableConnectToServer == true) {
+				if (ConnectionHelper.getConnectionStatus() == ConnectionHelper.CONNECT_FAIL) {
 					tvConnectStatus.setVisibility(View.VISIBLE);
 				} else {
 					tvConnectStatus.setVisibility(View.GONE);
@@ -141,9 +141,9 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onDestroy() {
 		Log.d(TAG, "onDestroy");
-		if (GlobalInfo.manualLogout == true || GlobalInfo.password.length() == 0) {
-			startService(new Intent(this, TcpService.class));
-		}
+		// if (GlobalInfo.manualLogout == true || GlobalInfo.password.length() == 0) {
+		// startService(new Intent(this, TcpService.class));
+		// }
 		unregisterReceiver(broadcastReceiver);
 		super.onDestroy();
 	}
@@ -181,7 +181,7 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onResume() {
 		Log.d(TAG, "onResume");
-		if (GlobalInfo.unableConnectToServer == true) {
+		if (ConnectionHelper.getConnectionStatus() == ConnectionHelper.CONNECT_FAIL) {
 			tvConnectStatus.setVisibility(View.VISIBLE);
 		} else {
 			tvConnectStatus.setVisibility(View.GONE);

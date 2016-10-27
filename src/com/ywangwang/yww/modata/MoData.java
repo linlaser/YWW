@@ -29,6 +29,7 @@ public class MoData implements Cloneable {
 	public static final int GET_GXJ_SUCCESS = 203;
 	public static final int GET_GXJ_FAIL = 204;
 	public static final int LOGIN_KEY_ERR = 205;
+	public static final int LOGIN_CONFLICT = 206;
 
 	private int cmd = 0;// ÃüÁî
 	private int type = 0;// 0=APP,1=¹ÜÏß»ú

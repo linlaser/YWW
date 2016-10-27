@@ -1,14 +1,16 @@
 package com.ywangwang.yww.send;
 
 import com.ywangwang.yww.Client;
+import com.ywangwang.yww.ConnectionHelper;
 import com.ywangwang.yww.GlobalInfo;
-import com.ywangwang.yww.MoMessage;
+import com.ywangwang.yww.LoginActivity;
 import com.ywangwang.yww.TcpService;
 import com.ywangwang.yww.User;
 import com.ywangwang.yww.lib.SessionKey;
-import com.ywangwang.yww.net.Operaton;
+import com.ywangwang.yww.modata.MoData;
 import com.ywangwang.yww.net.SocketOperaton;
-import com.ywangwang.yww.net.TcpManager;
+import com.ywangwang.yww.send.CallBack.GetDeviceListCallBack;
+import com.ywangwang.yww.send.CallBack.LoginCallBack;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -22,19 +24,24 @@ public class DataSendManager {
 	private static final String TAG = "DataSendManager";
 
 	private static final int TIMEOUT = -1;
+	private static final int DELAY = -2;
 
-	private static final int LOGIN_SUCCESS = 1;
-	private static final int LOGIN_FAIL = 2;
-	private static final int REGISTER_SUCCESS = 3;
-	private static final int REGISTER_FAIL = 4;
-	private static final int GET_DEVICE_LIST_SUCCESS = 5;
-	private static final int GET_DEVICE_LIST_FAIL = 6;
+	public static final int NOT_LOGIN = ConnectionHelper.NOT_LOGIN;
+	public static final int LOGIN_SUCCESS = ConnectionHelper.LOGIN_SUCCESS;
+	public static final int LOGIN_FAIL = ConnectionHelper.LOGIN_FAIL;
+	public static final int LOGINING = ConnectionHelper.LOGINING;
+	public static final int LOGIN_CONFLICT = ConnectionHelper.LOGIN_CONFLICT;
+
+	private static final int GET_DEVICE_LIST_SUCCESS = 6;
+	private static final int GET_DEVICE_LIST_FAIL = 7;
 
 	private Context context;
 	private static DataSendManager dataSendManager = null;
 
 	protected LoginCallBack loginCallBack;
 	private SessionKey loginSessionKey = new SessionKey();
+	protected GetDeviceListCallBack getDeviceListCallBack;
+	private SessionKey getDeviceListSessionKey = new SessionKey();
 
 	public static DataSendManager getInstance() {
 		if (null == dataSendManager) {
@@ -50,21 +57,62 @@ public class DataSendManager {
 
 	public void destroy() {
 		loginCallBack = null;
+		getDeviceListCallBack = null;
 		context.unregisterReceiver(broadcastReceiver);
+		loginHandler.removeCallbacksAndMessages(null);
+		getDeviceListHandler.removeCallbacksAndMessages(null);
 	}
 
-	public void setLoginListener(LoginCallBack c) {
+	public void setLoginCallBack(LoginCallBack c) {
 		loginCallBack = c;
 	}
 
-	public void removeLoginListener() {
+	public void removeLoginCallBack() {
 		loginCallBack = null;
 	}
 
+	public void setGetDeviceListCallBack(GetDeviceListCallBack c) {
+		getDeviceListCallBack = c;
+	}
+
+	public void removeGetDeviceListCallBack() {
+		getDeviceListCallBack = null;
+	}
+
+	public void logout() {
+		ConnectionHelper.setLoginStatus(ConnectionHelper.NOT_LOGIN);
+		SocketOperaton.logout(0);
+		ConnectionHelper.reConnect();
+		if (ConnectionHelper.isAlreadyShowLoginActivity() == false) {
+			context.startActivity(new Intent(context, LoginActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+			ConnectionHelper.setAlreadyShowLoginActivity(true);
+		}
+	}
+
+	private void delay(Handler handler, Message msg, int count, Object obj) {
+		if (count == 0) {
+			count = 6;
+		}
+		msg.what = DELAY;
+		msg.arg2 = --count;
+		msg.obj = obj;
+		handler.sendMessageDelayed(msg, 2 * 1000L);
+	}
+
 	public void login(String username, String password) {
+		User user = new User(username, password);
+		login(user, 0);
+	}
+
+	public void login(User user, int count) {
 		Message msg = Message.obtain();
 		msg.arg1 = loginSessionKey.generateNewSessionKey();
-		int result = SocketOperaton.login(username, password, msg.arg1);
+		ConnectionHelper.setLoginStatus(ConnectionHelper.LOGINING);
+		if (ConnectionHelper.getConnectionStatus() != ConnectionHelper.CONNECT_SUCCESS) {
+			delay(loginHandler, msg, count, user);
+			return;
+		}
+		int result = SocketOperaton.login(user, msg.arg1);
 		if (result == msg.arg1) {
 			msg.what = LOGIN_FAIL;
 			msg.arg2 = TIMEOUT;
@@ -86,16 +134,104 @@ public class DataSendManager {
 				return;
 			}
 			loginSessionKey.cleanSessionKey();
+			loginHandler.removeCallbacksAndMessages(null);
 			switch (msg.what) {
 			case LOGIN_SUCCESS:
-				loginHandler.removeMessages(LOGIN_FAIL);
+				TcpService.toast.setText("登录成功！").show();
 				if (loginCallBack != null) {
 					loginCallBack.onSuccess(((User) msg.obj).username, ((User) msg.obj).password);
 				}
+				ConnectionHelper.setLoginStatus(ConnectionHelper.LOGIN_SUCCESS);
 				break;
 			case LOGIN_FAIL:
+				TcpService.toast.setText("登录失败！").show();
 				if (loginCallBack != null) {
 					loginCallBack.onError(LOGIN_FAIL, (String) msg.obj);
+				}
+				ConnectionHelper.setLoginStatus(ConnectionHelper.LOGIN_FAIL);
+				if (msg.arg2 == TIMEOUT) {
+					ConnectionHelper.reConnect();
+				}
+				break;
+			case LOGIN_CONFLICT:
+				TcpService.toast.setText("账号在其他设备登录！").show();
+				ConnectionHelper.setLoginStatus(ConnectionHelper.LOGIN_CONFLICT);
+				logout();
+				break;
+			case DELAY:
+				Log.e(TAG, "loginHandler.DELAY,count=" + msg.arg2);
+				if (msg.arg2 > 0) {
+					login((User) msg.obj, msg.arg2);
+				} else {
+					TcpService.toast.setText("登录失败！").show();
+					if (loginCallBack != null) {
+						loginCallBack.onError(LOGIN_FAIL, "登录超时！");
+					}
+					ConnectionHelper.setLoginStatus(ConnectionHelper.LOGIN_FAIL);
+					ConnectionHelper.reConnect();
+				}
+				break;
+			default:
+				break;
+			}
+		}
+	};
+
+	public void getDeviceList() {
+		getDeviceList(0);
+	}
+
+	public void getDeviceList(int count) {
+		Message msg2 = Message.obtain();
+		msg2.arg1 = getDeviceListSessionKey.generateNewSessionKey();
+
+		if (ConnectionHelper.getLoginStatus() != ConnectionHelper.LOGIN_SUCCESS) {
+			delay(getDeviceListHandler, msg2, count, null);
+			return;
+		}
+
+		int result2 = SocketOperaton.getGxj(GlobalInfo.username, GlobalInfo.password, msg2.arg1);
+		if (result2 == msg2.arg1) {
+			msg2.what = GET_DEVICE_LIST_FAIL;
+			msg2.arg2 = TIMEOUT;
+			msg2.obj = "获取超时";
+			getDeviceListHandler.sendMessageDelayed(msg2, 10 * 1000L);
+		} else {
+			msg2.what = GET_DEVICE_LIST_FAIL;
+			msg2.obj = "获取信息发送失败";
+			getDeviceListHandler.sendMessage(msg2);
+		}
+	}
+
+	Handler getDeviceListHandler = new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			super.handleMessage(msg);
+			// 如果会话KEY和最后一次不同，就忽略此msg
+			if (getDeviceListSessionKey.getSessionKey() != msg.arg1) {
+				return;
+			}
+			getDeviceListSessionKey.cleanSessionKey();
+			getDeviceListHandler.removeCallbacksAndMessages(null);
+			switch (msg.what) {
+			case GET_DEVICE_LIST_SUCCESS:
+				if (getDeviceListCallBack != null) {
+					getDeviceListCallBack.onSuccess((Client) msg.obj);
+				}
+				break;
+			case GET_DEVICE_LIST_FAIL:
+				if (getDeviceListCallBack != null) {
+					getDeviceListCallBack.onError(LOGIN_FAIL, (String) msg.obj);
+				}
+				break;
+			case DELAY:
+				Log.e(TAG, "getDeviceListHandler.DELAY,count=" + msg.arg2);
+				if (msg.arg2 > 0) {
+					getDeviceList(msg.arg2);
+				} else {
+					if (getDeviceListCallBack != null) {
+						getDeviceListCallBack.onError(DELAY, "获取超时！");
+					}
 				}
 				break;
 			default:
@@ -107,41 +243,47 @@ public class DataSendManager {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			if (intent.getExtras().getString(GlobalInfo.BROADCAST_RECEIVE_NEW_MESSAGE, null) != null) {
-				MoMessage moMsg = MoMessage.analyzeJsonData(intent.getExtras().getString(GlobalInfo.BROADCAST_RECEIVE_NEW_MESSAGE));
-				if (moMsg == null) {
+				MoData moData = MoData.analyzeJsonData(intent.getExtras().getString(GlobalInfo.BROADCAST_RECEIVE_NEW_MESSAGE));
+				if (moData == null) {
 					return;
 				}
-				Log.d(TAG, moMsg.toString());
-				// toast.setText(moMsg.toString()).show();
-				if (moMsg.cmd == MoMessage.LOGIN_KEY_ERR) {
+				Log.d(TAG, moData.toString());
+				// toast.setText(moData.toString()).show();
+				if (moData.getCmd() == MoData.LOGIN_KEY_ERR) {
 					// Message newMsg = Message.obtain();
 					// newMsg.arg1 = sessionKey.getSessionKey();
-					// newMsg.what = MoMessage.LOGIN_KEY_ERR;
-					// newMsg.obj = moMsg.info;
+					// newMsg.what = MoData.LOGIN_KEY_ERR;
+					// newMsg.obj = moData.info;
 					// handler.sendMessage(newMsg);
-				} else if (moMsg.cmd == MoMessage.LOGIN_SUCCESS) {
-					User user = User.analyzeJsonData(moMsg.jsonData);
+				} else if (moData.getCmd() == MoData.LOGIN_CONFLICT) {
 					Message newMsg = Message.obtain();
-					newMsg.arg1 = moMsg.sessionKey;
+					newMsg.arg1 = loginSessionKey.getSessionKey();
+					newMsg.what = LOGIN_CONFLICT;
+					newMsg.obj = moData.getInfo();
+					loginHandler.sendMessage(newMsg);
+				} else if (moData.getCmd() == MoData.LOGIN_SUCCESS) {
+					User user = User.analyzeJsonData(moData.getJsonData());
+					Message newMsg = Message.obtain();
+					newMsg.arg1 = moData.getSessionKey();
 					if (user != null) {
 						newMsg.what = LOGIN_SUCCESS;
-						GlobalInfo.id = moMsg.id;
+						GlobalInfo.id = moData.getId();
 						newMsg.obj = user;
 					} else {
 						newMsg.what = LOGIN_FAIL;
 						newMsg.obj = "数据解析失败";
 					}
 					loginHandler.sendMessage(newMsg);
-				} else if (moMsg.cmd == MoMessage.LOGIN_FAIL) {
+				} else if (moData.getCmd() == MoData.LOGIN_FAIL) {
 					Message newMsg = Message.obtain();
-					newMsg.arg1 = moMsg.sessionKey;
+					newMsg.arg1 = moData.getSessionKey();
 					newMsg.what = LOGIN_FAIL;
-					newMsg.obj = moMsg.info;
+					newMsg.obj = moData.getInfo();
 					loginHandler.sendMessage(newMsg);
-				} else if (moMsg.cmd == MoMessage.GET_GXJ_SUCCESS) {
-					Client client = Client.analyzeJsonData(moMsg.jsonData);
+				} else if (moData.getCmd() == MoData.GET_GXJ_SUCCESS) {
+					Client client = Client.analyzeJsonData(moData.getJsonData());
 					Message newMsg = Message.obtain();
-					newMsg.arg1 = moMsg.sessionKey;
+					newMsg.arg1 = moData.getSessionKey();
 					if (client != null) {
 						newMsg.what = GET_DEVICE_LIST_SUCCESS;
 						newMsg.obj = client;
@@ -149,19 +291,19 @@ public class DataSendManager {
 						newMsg.what = GET_DEVICE_LIST_FAIL;
 						newMsg.obj = "数据解析失败";
 					}
-					// handler.sendMessage(newMsg);
-				} else if (moMsg.cmd == MoMessage.GET_GXJ_FAIL) {
+					getDeviceListHandler.sendMessage(newMsg);
+				} else if (moData.getCmd() == MoData.GET_GXJ_FAIL) {
 					Message newMsg = Message.obtain();
-					newMsg.arg1 = moMsg.sessionKey;
+					newMsg.arg1 = moData.getSessionKey();
 					newMsg.what = GET_DEVICE_LIST_FAIL;
-					newMsg.obj = moMsg.info;
-					// handler.sendMessage(newMsg);
+					newMsg.obj = moData.getInfo();
+					getDeviceListHandler.sendMessage(newMsg);
 				}
 			} else if (intent.getExtras().getBoolean(GlobalInfo.BROADCAST_CONNECT_SOCKET_SUCCESS, false) == true) {
-				GlobalInfo.unableConnectToServer = false;
+				ConnectionHelper.setConnectionStatus(ConnectionHelper.CONNECT_SUCCESS);
 				context.sendBroadcast(new Intent(GlobalInfo.BROADCAST_ACTION).putExtra(GlobalInfo.BROADCAST_UPDATE_CONNECT_STATUS, true));
 				Log.d(TAG, "BROADCAST_CONNECT_SOCKET_SUCCESS");
-				if (GlobalInfo.online == false && GlobalInfo.manualLogout == false && GlobalInfo.password.length() > 0 && GlobalInfo.autoLogin == true) {
+				if (ConnectionHelper.getLoginStatus() != ConnectionHelper.LOGIN_SUCCESS && ConnectionHelper.isAlreadyShowLoginActivity() == false && GlobalInfo.password.length() > 0 && GlobalInfo.autoLogin == true) {
 					// AutoLogin
 					Log.d(TAG, "AutoLogin");
 					login(GlobalInfo.username, GlobalInfo.password);

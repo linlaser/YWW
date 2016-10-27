@@ -2,6 +2,7 @@ package com.ywangwang.yww;
 
 import com.ywangwang.yww.lib.CustomToast;
 import com.ywangwang.yww.lib.StrConv;
+import com.ywangwang.yww.modata.MoData;
 import com.ywangwang.yww.net.TcpManager;
 
 import android.app.Activity;
@@ -75,13 +76,13 @@ public class DeviceControl extends Activity {
 	}
 
 	private void sendMessage(String message) {
-		MoMessage moMsg = new MoMessage();
-		moMsg.cmd = MoMessage.SEND_MESSAGE;
-		moMsg.id = GlobalInfo.id;
-		moMsg.loginKey = GlobalInfo.loginKey;
-		moMsg.toId = new long[1];
-		moMsg.toId[0] = deviceId;
-		moMsg.info = StrConv.Encode(message);
-		TcpManager.sendMSG(moMsg.toString());
+		MoData moData = new MoData();
+		moData.setCmd(MoData.SEND_MESSAGE);
+		moData.setId(GlobalInfo.id);
+		moData.setLoginKey(GlobalInfo.loginKey);
+		moData.setToId(new long[1]);
+		moData.getToId()[0] = deviceId;
+		moData.setInfo(StrConv.Encode(message));
+		TcpManager.sendMSG(moData.toString());
 	}
 }
