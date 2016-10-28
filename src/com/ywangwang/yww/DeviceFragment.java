@@ -102,6 +102,7 @@ public class DeviceFragment extends Fragment {
 	public void onResume() {
 		super.onResume();
 		Log.i(TAG, TAG + "-->>onResume");
+		// Log.e(TAG, "ConnectionHelper.getLoginStatus()=" + ConnectionHelper.getLoginStatus());
 		if (client == null && ConnectionHelper.getLoginStatus() == ConnectionHelper.LOGIN_SUCCESS) {
 			swipeRefreshLayout.post(new Runnable() {
 				@Override
